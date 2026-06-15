@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tasklist — a focused to-do app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14171F;
+    --surface: #1D222C;
+    --surface-raised: #262C38;
+    --border: #2E3544;
+    --text: #E9ECF3;
+    --text-muted: #8990A6;
+    --accent: #FF8C5A;
+    --accent-soft: rgba(255, 140, 90, 0.14);
+    --success: #6EE7A8;
+    --success-soft: rgba(110, 231, 168, 0.12);
+    --danger: #FF6B6B;
+    --danger-soft: rgba(255, 107, 107, 0.12);
+    --radius: 10px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(255, 140, 90, 0.07), transparent 45%),
+      radial-gradient(circle at 85% 100%, rgba(110, 231, 168, 0.06), transparent 45%);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 56px 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 460px;
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+
+  .header p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* Signature element: circular progress ring */
+  .ring-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+
+  .ring-wrap svg { transform: rotate(-90deg); }
+
+  .ring-track {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 4;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.4s ease, stroke 0.4s ease;
+  }
+
+  .ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ---------- Input row ---------- */
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .input-row input[type="text"] {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .input-row input[type="text"]::placeholder { color: var(--text-muted); }
+
+  .input-row input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .add-btn {
+    background: var(--accent);
+    color: #1A1410;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0 20px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: transform 0.1s ease, filter 0.15s ease;
+  }
+
+  .add-btn:hover { filter: brightness(1.08); }
+  .add-btn:active { transform: scale(0.97); }
+
+  /* ---------- Filters ---------- */
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .filter-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .filter-btn:hover { color: var(--text); border-color: #3A4254; }
+
+  .filter-btn.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ---------- List ---------- */
+  .list {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 14px;
+    animation: slideIn 0.22s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .task.completed { border-color: var(--border); }
+
+  .checkbox {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+  }
+
+  .checkbox:hover { border-color: var(--success); }
+
+  .task.completed .checkbox {
+    background: var(--success);
+    border-color: var(--success);
+  }
+
+  .checkbox svg {
+    width: 11px;
+    height: 11px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .task.completed .checkbox svg { opacity: 1; }
+
+  .task-text {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+    word-break: break-word;
+    cursor: text;
+  }
+
+  .task.completed .task-text {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--border);
+  }
+
+  .task-edit-input {
+    flex: 1;
+    background: var(--surface-raised);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font-body);
+    padding: 4px 8px;
+    outline: none;
+  }
+
+  .delete-btn {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.15s ease;
+  }
+
+  .task:hover .delete-btn { opacity: 1; }
+
+  .delete-btn:hover {
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+
+  .delete-btn svg { width: 15px; height: 15px; }
+
+  /* ---------- Empty state ---------- */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+  }
+
+  .empty strong {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    padding: 4px 2px;
+  }
+
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-family: var(--font-body);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+    padding: 0;
+  }
+
+  .clear-btn:hover {
+    color: var(--danger);
+    text-decoration-color: var(--danger);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="header">
+    <div>
+      <h1>Tasklist</h1>
+      <p>Saved automatically in this browser</p>
+    </div>
+    <div class="ring-wrap">
+      <svg width="56" height="56" viewBox="0 0 56 56">
+        <circle class="ring-track" cx="28" cy="28" r="24" />
+        <circle class="ring-progress" id="ringProgress" cx="28" cy="28" r="24"
+                stroke-dasharray="150.8" stroke-dashoffset="150.8" />
+      </svg>
+      <div class="ring-label" id="ringLabel">0%</div>
+    </div>
+  </header>
+
+  <form class="input-row" id="taskForm">
+    <input type="text" id="taskInput" placeholder="What needs doing?" autocomplete="off" maxlength="200" />
+    <button type="submit" class="add-btn">Add</button>
+  </form>
+
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="active">Active</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+  </div>
+
+  <ul class="list" id="taskList"></ul>
+
+  <div class="footer">
+    <span id="itemsLeft">0 items left</span>
+    <button class="clear-btn" id="clearCompleted">Clear completed</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const STORAGE_KEY = 'tasklist.todos.v1';
+  const FILTER_KEY = 'tasklist.filter.v1';
+
+  const taskForm = document.getElementById('taskForm');
+  const taskInput = document.getElementById('taskInput');
+  const taskList = document.getElementById('taskList');
+  const filters = document.getElementById('filters');
+  const itemsLeft = document.getElementById('itemsLeft');
+  const clearCompletedBtn = document.getElementById('clearCompleted');
+  const ringProgress = document.getElementById('ringProgress');
+  const ringLabel = document.getElementById('ringLabel');
+
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 24; // r = 24
+
+  /* ---------- State ---------- */
+  let tasks = loadTasks();
+  let currentFilter = localStorage.getItem(FILTER_KEY) || 'all';
+
+  /* ---------- Persistence ---------- */
+  function loadTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (err) {
+      console.error('Failed to read tasks from localStorage:', err);
+      return [];
+    }
+  }
+
+  function saveTasks() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (err) {
+      console.error('Failed to save tasks to localStorage:', err);
+    }
+  }
+
+  function saveFilter() {
+    localStorage.setItem(FILTER_KEY, currentFilter);
+  }
+
+  /* ---------- Helpers ---------- */
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  /* ---------- CRUD ---------- */
+  function addTask(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    tasks.unshift({ id: uid(), text: trimmed, completed: false, createdAt: Date.now() });
+    saveTasks();
+    render();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+  }
+
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.completed = !task.completed;
+      saveTasks();
+      render();
+    }
+  }
+
+  function updateTaskText(id, newText) {
+    const trimmed = newText.trim();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (!trimmed) {
+      deleteTask(id); // editing to empty removes the task
+      return;
+    }
+    task.text = trimmed;
+    saveTasks();
+    render();
+  }
+
+  function clearCompleted() {
+    tasks = tasks.filter(t => !t.completed);
+    saveTasks();
+    render();
+  }
+
+  /* ---------- Filtering ---------- */
+  function getFilteredTasks() {
+    if (currentFilter === 'active') return tasks.filter(t => !t.completed);
+    if (currentFilter === 'completed') return tasks.filter(t => t.completed);
+    return tasks;
+  }
+
+  function setFilter(filter) {
+    currentFilter = filter;
+    saveFilter();
+    render();
+  }
+
+  /* ---------- Rendering ---------- */
+  function render() {
+    renderFilters();
+    renderList();
+    renderFooter();
+    renderProgress();
+  }
+
+  function renderFilters() {
+    [...filters.children].forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === currentFilter);
+    });
+  }
+
+  function renderList() {
+    const visible = getFilteredTasks();
+
+    if (visible.length === 0) {
+      const message = tasks.length === 0
+        ? { title: 'Nothing here yet', body: 'Add your first task above to get started.' }
+        : currentFilter === 'completed'
+          ? { title: 'No completed tasks', body: 'Finished tasks will show up here.' }
+          : { title: 'All caught up', body: 'No active tasks — nice work.' };
+
+      taskList.innerHTML = `
+        <li class="empty">
+          <strong>${message.title}</strong>
+          ${message.body}
+        </li>`;
+      return;
+    }
+
+    taskList.innerHTML = visible.map(task => `
+      <li class="task ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+        <button class="checkbox" data-action="toggle" aria-label="Toggle task complete">
+          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 8.5L6 11.5L13 4.5" stroke="#14171F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <span class="task-text" data-action="edit" title="Double-click to edit">${escapeHtml(task.text)}</span>
+        <button class="delete-btn" data-action="delete" aria-label="Delete task">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </li>
+    `).join('');
+  }
+
+  function renderFooter() {
+    const remaining = tasks.filter(t => !t.completed).length;
+    itemsLeft.textContent = `${remaining} item${remaining === 1 ? '' : 's'} left`;
+
+    const hasCompleted = tasks.some(t => t.completed);
+    clearCompletedBtn.style.visibility = hasCompleted ? 'visible' : 'hidden';
+  }
+
+  function renderProgress() {
+    const total = tasks.length;
+    const done = tasks.filter(t => t.completed).length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    const offset = RING_CIRCUMFERENCE - (pct / 100) * RING_CIRCUMFERENCE;
+    ringProgress.style.strokeDashoffset = offset;
+    ringProgress.style.stroke = pct === 100 && total > 0 ? 'var(--success)' : 'var(--accent)';
+    ringLabel.textContent = `${pct}%`;
+  }
+
+  /* ---------- Inline editing ---------- */
+  function startEditing(li, task) {
+    const span = li.querySelector('.task-text');
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'task-edit-input';
+    input.value = task.text;
+    input.maxLength = 200;
+
+    span.replaceWith(input);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    let finished = false;
+    function finish(commit) {
+      if (finished) return;
+      finished = true;
+      if (commit) updateTaskText(task.id, input.value);
+      else render(); // revert without saving
+    }
+
+    input.addEventListener('blur', () => finish(true));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+  }
+
+  /* ---------- Event listeners (delegated) ---------- */
+  taskForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    addTask(taskInput.value);
+    taskInput.value = '';
+    taskInput.focus();
+  });
+
+  filters.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    setFilter(btn.dataset.filter);
+  });
+
+  clearCompletedBtn.addEventListener('click', clearCompleted);
+
+  // Single delegated listener handles toggle, delete, and edit for every task
+  taskList.addEventListener('click', (e) => {
+    const li = e.target.closest('.task');
+    if (!li) return;
+    const id = li.dataset.id;
+    const action = e.target.closest('[data-action]')?.dataset.action;
+
+    if (action === 'toggle') toggleTask(id);
+    if (action === 'delete') deleteTask(id);
+  });
+
+  taskList.addEventListener('dblclick', (e) => {
+    const li = e.target.closest('.task');
+    const span = e.target.closest('[data-action="edit"]');
+    if (!li || !span) return;
+    const task = tasks.find(t => t.id === li.dataset.id);
+    if (task) startEditing(li, task);
+  });
+
+  /* ---------- Init ---------- */
+  render();
+})();
+</script>
+
+</body>
+</html>
